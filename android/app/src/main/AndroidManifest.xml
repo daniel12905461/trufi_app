@@ -1,4 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- required -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- foregroundServiceType: dataSync -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- foregroundServiceType: remoteMessaging -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+
     <application
         android:label="trufi_app"
         android:name="${applicationName}"
@@ -34,7 +48,7 @@
         <!-- Warning: Do not change service name. -->
         <service 
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
-            android:foregroundServiceType="dataSync|remoteMessaging"
+            android:foregroundServiceType="dataSync|remoteMessaging|location"
             android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
@@ -48,14 +62,4 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
-
-    <!-- required -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
-    <!-- foregroundServiceType: dataSync -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-
-    <!-- foregroundServiceType: remoteMessaging -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
-
 </manifest>

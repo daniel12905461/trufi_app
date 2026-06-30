@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -25,7 +27,7 @@ class MyTaskHandler extends TaskHandler {
   Future<void> _connectWebSocket() async {
     try {
       _channel = WebSocketChannel.connect(
-        Uri.parse('ws://192.168.1.7:8000/ws'),
+        Uri.parse('ws://192.168.1.5:8000/ws'),
       );
 
       _channel!.stream.listen(
@@ -74,7 +76,8 @@ class MyTaskHandler extends TaskHandler {
   @override
   void onRepeatEvent(DateTime timestamp) {
     // _incrementCount();
-    _channel?.sink.add('hola mundo daniel');
+    // _channel?.sink.add('hola mundo daniel dc');
+    _sendCurrentLocation();
   }
 
   // Called when the task is destroyed.
@@ -113,6 +116,29 @@ class MyTaskHandler extends TaskHandler {
   @override
   void onNotificationDismissed() {
     print('onNotificationDismissed');
+  }
+
+  Future<void> _sendCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+      );
+
+      final data = {
+        "type": "location",
+        "lat": position.latitude,
+        "lng": position.longitude,
+        "speed": position.speed,
+        "accuracy": position.accuracy,
+        "timestamp": DateTime.now().toIso8601String(),
+      };
+
+      _channel?.sink.add(jsonEncode(data));
+
+      print("Ubicación enviada: $data");
+    } catch (e) {
+      print("Error obteniendo ubicación: $e");
+    }
   }
 }
 
@@ -172,6 +198,28 @@ class _WebSocketExampleState extends State<WebSocketExample> {
         await FlutterForegroundTask.openAlarmsAndRemindersSettings();
       }
     }
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied) {
+      throw Exception("Permiso de ubicación denegado");
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      await Geolocator.openAppSettings();
+      throw Exception("Permiso denegado permanentemente");
+    }
   }
 
   void _initService() {
@@ -188,7 +236,7 @@ class _WebSocketExampleState extends State<WebSocketExample> {
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: ForegroundTaskEventAction.repeat(5000),
+        eventAction: ForegroundTaskEventAction.repeat(10000),
         autoRunOnBoot: true,
         autoRunOnMyPackageReplaced: true,
         allowWakeLock: true,
@@ -249,9 +297,9 @@ class _WebSocketExampleState extends State<WebSocketExample> {
     // Add a callback to receive data sent from the TaskHandler.
     FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Request permissions and initialize the service.
-      _requestPermissions();
+      await _requestPermissions();
       _initService();
     });
   }
@@ -305,7 +353,10 @@ class _WebSocketExampleState extends State<WebSocketExample> {
                 // ),
                 IconButton(
                   icon: const Icon(Icons.start),
-                  onPressed: _startService,
+                  onPressed: () async {
+                    await _requestPermissions();
+                    await _startService();
+                  },
                 ),
                 IconButton(
                   icon: const Icon(Icons.stop),
